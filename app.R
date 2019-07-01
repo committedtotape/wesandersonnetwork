@@ -4,8 +4,11 @@ library(wesanderson) #for colours
 library(tidygraph) #for converting to network data
 library(visNetwork) #for interactive network viz
 library(extrafont) #for fonts
-library(graphlayouts)
 
+# coordinates for nodes in network
+# These are slightly tweaked coordinates as extracted from shiny app
+# using visGetPositions function.
+# Manually copied from shiny app into script using datapasta package
 
 coords <- data.frame(
   x = c(-1062L, -429L, -3L, -746L, -225L, 149L, 1042L, 746L, 621L,
@@ -245,15 +248,6 @@ wes_network_n_e <- wes_network_n %>%
 
 wes_network_n_e
 
-visIgraph(wes_network_n_e, layout = "layout_nicely", type = "full", randomSeed = 123) %>% 
-  visInteraction(hover = TRUE,
-                 tooltipStyle = 'position: fixed;visibility:hidden;padding: 2px;white-space: nowrap;
- font-family: Futura;font-size:16px;font-color:#852D2C;background-color: #EA93B8;') %>% 
-  visOptions(nodesIdSelection = TRUE,
-             highlightNearest = list(enabled = TRUE, degree = list(from = 1, to = 1),
-                                     algorithm = "hierarchical")) %>% 
-  visEdges(arrows = list(to = FALSE, from = FALSE))
-
 ui <- fluidPage(
   includeCSS("styles.css"),
   h1(toupper("Wes Anderson Actor Network"), 
@@ -278,7 +272,9 @@ ui <- fluidPage(
            p("Source:", a("IMDb.com", href = "https://www.imdb.com/name/nm0027572/")),
            br(),
            p("Made by committedtotape"),
-           p(a("Twitter", href = "https://twitter.com/committedtotape"), "|", a("Blog", href = "https://davidsmale.netlify.com/portfolio/"), "|", "GitHub"),
+           p(a("Twitter", href = "https://twitter.com/committedtotape"), "|", 
+             a("Blog", href = "https://davidsmale.netlify.com/portfolio/"), "|", 
+             a("GitHub", href = "https://github.com/committedtotape/wesandersonnetwork")),
            br(),
            p(""),
            style = "font-family: 'Futura', cursive; color: #852D2C; background-color: #EA93B8;
@@ -310,11 +306,6 @@ ui <- fluidPage(
                       border-radius: 6px;")
     )    
 )
-# ,
-# fluidRow(
-#   column(10,
-#          verbatimTextOutput("test")),
-#   column(2, actionButton("goButton", "Go!")))
 )
 
 apps_selection_3_8 <- act_aes %>% 
@@ -324,9 +315,7 @@ apps_selection_3_8 <- act_aes %>%
 server <- function(input, output) {
   output$network <- renderVisNetwork({
     visIgraph(wes_network_n_e, 
-              #layout = "layout_with_kk", 
               type = "full"
-              #, randomSeed = 254
               ) %>% 
       visInteraction(hover = TRUE,
                      tooltipStyle = 'position: fixed;visibility:hidden;padding: 2px;white-space: nowrap;
@@ -337,6 +326,7 @@ server <- function(input, output) {
       visEdges(arrows = list(to = FALSE, from = FALSE)) 
   })
   
+  # select an actor
   observe({
     nodes_selection <- input$selact
     
@@ -344,6 +334,7 @@ server <- function(input, output) {
       visSelectNodes(id = nodes_selection) 
   })
   
+  # select a range for number of apearances of actor
   observe({
     apps_selection <- act_aes %>% 
       filter(weight >= input$apprange[1] & weight <= input$apprange[2]) %>% 
@@ -354,6 +345,7 @@ server <- function(input, output) {
 
   })
   
+  # select group as decided by me - Regulars, Early Players, Late Players
   observe({
       group_selection <- wes_groups %>% 
         filter(group == input$selgroup) %>% 
@@ -362,18 +354,9 @@ server <- function(input, output) {
     visNetworkProxy("network") %>%
       visSelectNodes(id = group_selection) 
   })
-  
-  #output$test <- renderPrint( vals$coords )
-  
-  # vals <- reactiveValues(coords=NULL)
-  # observeEvent(input$goButton, {
-  #   visNetworkProxy("network") %>% visGetPositions()
-  #   vals$coords <- if (!is.null(input$network_positions)) 
-  #     do.call(rbind, input$network_positions)
-  # })
+
   
 }
-
 
 
 shinyApp(ui = ui, server = server)
