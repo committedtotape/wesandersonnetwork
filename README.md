@@ -16,6 +16,9 @@ A write-up of the static visualisation can be found on my blog:
 
 A write-up of the interactive visualisation hopefully coming soon...
 
+Here's the Shiny App for your pleasure:
+[https://committedtotape.shinyapps.io/wesandersonnetwork/](https://committedtotape.shinyapps.io/wesandersonnetwork/)
+
 Forever indebted to [Karthik Ram's](https://github.com/karthik) [wesanderson](https://github.com/karthik/wesanderson) package.
 
 Please use Wes Anderson colour palettes responsibly.
