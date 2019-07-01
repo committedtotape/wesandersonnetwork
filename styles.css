@@ -1,3 +1,4 @@
+/*Background colour of entire app*/
 body {
   background-color: #D3DDDC;
 }
@@ -11,6 +12,7 @@ a:hover {
   color: #7294D4;
 }
 
+/*Slider input customisation*/
 .irs-bar {
     height: 8px;
     top: 25px;
@@ -35,6 +37,7 @@ a:hover {
     color: #852D2C;
 }
 
+/*Select box customisation*/
 .selectize-input.focus {
     border-color: #852D2C;
     outline: 0;
