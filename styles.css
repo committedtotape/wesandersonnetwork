@@ -1,0 +1,43 @@
+body {
+  background-color: #D3DDDC;
+}
+
+/*Colour hyperlinks*/
+a {
+  color: #852D2C;
+}
+
+a:hover {
+  color: #7294D4;
+}
+
+.irs-bar {
+    height: 8px;
+    top: 25px;
+    border-top: 1px solid #852D2C;
+    border-bottom: 1px solid #852D2C;
+    background: #852D2C;
+}
+
+.irs-from, .irs-to, .irs-single {
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.333;
+    text-shadow: none;
+    padding: 1px 3px;
+    background: #852D2C;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+}
+
+.irs-grid-text {
+    bottom: 5px;
+    color: #852D2C;
+}
+
+.selectize-input.focus {
+    border-color: #852D2C;
+    outline: 0;
+    -webkit-box-shadow: inset 0 1px 1px #852D2C,0 0 8px #852D2C;
+    box-shadow: inset 0 1px 1px #852D2C,0 0 8px #852D2C;
+}
