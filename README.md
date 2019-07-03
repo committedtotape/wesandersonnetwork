@@ -8,7 +8,7 @@ Files contained in this repo:
 
 *  `Wes Anderson Film Network.R` - Original project to scrape Wes Anderson film data and generate a static visualisation of actors appearing in his films.  Built using the [tidygraph](https://github.com/thomasp85/tidygraph) and [ggraph](https://github.com/thomasp85/ggraph) packages by [Thomas Pedersen](https://github.com/thomasp85).
 *  `wes_anderson_films.rds` - Dataset created in above script to save having to repeat web scrape for further Wes fun.
-*  `app.R` - A Shiny app script to create an interactive visualisation.  Built using the `tidygraph` and [visNetwork](https://github.com/datastorm-open/visNetwork) packages. It uses the dataset above.
+*  `app.R` - A Shiny app script to create an interactive visualisation.  Built using the `tidygraph` package, and the [visNetwork](https://github.com/datastorm-open/visNetwork) package by [DataStorm](https://github.com/datastorm-open). It uses the dataset above.
 *  `styles.css` - Some CSS stylings for Shiny app.
 
 A write-up of the static visualisation can be found on my blog:
