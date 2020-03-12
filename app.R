@@ -108,32 +108,18 @@ coords <- data.frame(
         -1354L, -1026L, -1059L, -1031L, -1329L, -805L, -982L, -845L,
         -1254L, -1292L, -1160L, -962L, -1182L, -1409L, -899L, -1407L, -1105L)
 ) %>% 
-mutate(x = as.numeric(x),
-y = as.numeric(y))
+  mutate(x = as.numeric(x),
+         y = as.numeric(y))
 
 
 # read in wes data from original network viz
 wes <- read_rds("wes_anderson_films.rds")
 
-# most used actors - actors appearing 3 or more times - to be used to highlight plot
-most_used_actors <- wes %>% 
-  add_count(actor) %>% 
-  filter(n >= 3) %>% 
-  distinct(actor) %>% 
-  pull()
-
-# film cast sizes - not used in the end
-cast_size <- wes %>% 
-  count(title, film_year) %>% 
-  arrange(film_year)
-
 # for each record attach the actor appearances and film cast sizes
 wes_film_actor <- wes %>% 
   select(title, actor, film_year) %>% 
-  add_count(actor) %>% 
-  add_count(title) %>% 
-  rename(actor_weight = n,
-         film_weight = nn)
+  add_count(actor, name = "actor_weight") %>% 
+  add_count(title, name = "film_weight") 
 
 # wes anderson palettes
 wes_palettes <- names(wesanderson::wes_palettes)
@@ -151,7 +137,6 @@ film_palette
 
 # select a colour to be used for every actor node
 actor_colour <- wes_colours[47, ]$colours
-#actor_colour <- "#852D2C"
 actor_colour
 
 # get actor size (number of appearances) and colour for actor nodes in plot
@@ -159,20 +144,16 @@ act_aes <- wes_film_actor %>%
   distinct(actor, actor_weight) %>% 
   rename(name = actor, weight = actor_weight) %>% 
   mutate(colour = actor_colour,
-         font_colour = "#852D2C",
+         font_colour = actor_colour,
          film_year = "")
 
-act_aes
-
-# get film weighting (number of cast members) for film nodes - not used in the end
+# get film weighting (number of cast members) for film nodes
 # and relevant colour for film nodes in plot
 film_aes <- wes_film_actor %>% 
   distinct(title, film_weight, film_year) %>% 
   rename(name = title, weight = film_weight) %>% 
   cbind(colour = film_palette,
         font_colour = film_palette)
-
-film_aes
 
 # weighting and colours for actors and films
 actor_film_aes <- rbind(act_aes, film_aes)
@@ -187,27 +168,32 @@ wes_network <- wes %>%
 
 wes_network
 
-wrap_15 <- scales::wrap_format(15)
-
+# names of actors appearing 4+ times
 regulars <- act_aes %>% 
   filter(weight >= 4) %>% 
   pull(name)
 
+# films with a sequential number for when they were released
+# to help identify actors who appeared in earlier and later films
 distinct_title <- wes %>% 
   arrange(film_year) %>% 
   distinct(title) %>% 
   mutate(film_no = row_number())
-  
+
+# group up certain actors depending on number of film appearances
+# and when those appearances were
 wes_groups <- wes %>% 
   arrange(film_year) %>% 
-  add_count(actor) %>% 
+  add_count(actor, name = "film_app") %>% 
   inner_join(distinct_title, by = "title") %>% 
-  add_count(actor, wt = film_no) %>% 
-  mutate(group = case_when(n >= 4 ~ "Regulars",
-                           n == 3 & nn == 6 ~ "Early Players",
-                           n == 3 & nn == 24 ~ "Late Players")) %>% 
+  add_count(actor, wt = film_no, name = "film_count") %>% 
+  mutate(group = case_when(film_app >= 4 ~ "Regulars",
+                           film_app == 3 & film_count == 6 ~ "Early Players",
+                           film_app == 3 & film_count == 24 ~ "Late Players")) %>% 
   distinct(actor, group)
 
+# for each network record add the coordinates as defined earlier based on tweaking default network
+# also add various node aesthetic characteristics for network plot
 wes_network_n <- wes_network %>% 
   # add type to indicate if node represents a film or an actor
   mutate(type = if_else(name %in% wes$title, "Film", "Actor")) %>% 
@@ -216,6 +202,7 @@ wes_network_n <- wes_network %>%
   mutate(x = coords$x, 
          y = coords$y,
          label = name_wrap,
+         # tool tip label
          title = if_else(type == "Film", paste0("<p>", name,"<br>", "(", film_year, ")", "<br>", "Cast Size: ", weight, "</p>"),
                          paste0("<p>", name,"<br>", "Appearances: ", weight, "</p>")),
          font.size = if_else(type == "Film", 60, 10),
@@ -235,6 +222,7 @@ wes_network_n <- wes_network %>%
 
 wes_network_n
 
+# add edge aesthetics
 wes_network_n_e <- wes_network_n %>% 
   # now focus on the edges data
   activate(edges) %>% 
@@ -244,44 +232,51 @@ wes_network_n_e <- wes_network_n %>%
          color.hover = .N()$colour[from],
          hoverWidth = 10 #,
          #selectionWidth = 10
-         )
+  )
 
 wes_network_n_e
 
+# UI
 ui <- fluidPage(
+  # add css file
   includeCSS("styles.css"),
+  # app title with customisation
   h1(toupper("Wes Anderson Actor Network"), 
      align = "center",
      style = "font-family: 'Futura', cursive;
               font-weight: 800; line-height: 1.1; padding-bottom: 5px; padding-top: 5px;
               color: #852D2C;
               background-color: #EA93B8; margin-top: 0; margin-left: 0;border-radius: 6px;"), 
+  # create 1 row with 3 columns
   fluidRow(
+    # let column - app desciption and explanation
     column(width = 2,
            wellPanel(
-           p("Network showing all credited actors appearing in Wes Anderson's 9 feature-length films."),   
-           br(),
-           br(),
-           p("Each", strong("green dot"), "represents an", strong("actor"), "and is sized based on the number of films they've appeared in."),
-           p("The", strong("lines"), "link an", strong("actor"), "to the", strong("film(s)"), "they appeared in, and are coloured based on the film."),
-           p(strong("Interact"), "by hovering over and clicking on elements of the network."),
-           br(),
-           br(),
-           p("------------", align = "center"),
-           br(),
-           p("Source:", a("IMDb.com", href = "https://www.imdb.com/name/nm0027572/")),
-           br(),
-           p("Made by committedtotape"),
-           p(a("Twitter", href = "https://twitter.com/committedtotape"), "|", 
-             a("Blog", href = "https://davidsmale.netlify.com/portfolio/"), "|", 
-             a("GitHub", href = "https://github.com/committedtotape/wesandersonnetwork")),
-           br(),
-           p(""),
-           style = "font-family: 'Futura', cursive; color: #852D2C; background-color: #EA93B8;
+             p("Network showing all credited actors appearing in Wes Anderson's 9 feature-length films."),   
+             br(),
+             br(),
+             p("Each", strong("green dot"), "represents an", strong("actor"), "and is sized based on the number of films they've appeared in."),
+             p("The", strong("lines"), "link an", strong("actor"), "to the", strong("film(s)"), "they appeared in, and are coloured based on the film."),
+             p(strong("Interact"), "by hovering over and clicking on elements of the network."),
+             br(),
+             br(),
+             p("------------", align = "center"),
+             br(),
+             p("Source:", a("IMDb.com", href = "https://www.imdb.com/name/nm0027572/")),
+             br(),
+             p("Made by committedtotape"),
+             p(a("Twitter", href = "https://twitter.com/committedtotape"), "|", 
+               a("Blog", href = "https://davidsmale.netlify.com/portfolio/"), "|", 
+               a("GitHub", href = "https://github.com/committedtotape/wesandersonnetwork")),
+             br(),
+             p(""),
+             style = "font-family: 'Futura', cursive; color: #852D2C; background-color: #EA93B8;
                     border-radius: 6px;"
            )),
+    # middle column - the network viz!
     column(width = 8,
            visNetworkOutput("network", width = "100%", height = 700)),
+    # right column - shiny inputs and max fischer quote!
     column(width = 2,
            wellPanel(
              p(strong("Explore it more!")),
@@ -305,28 +300,27 @@ ui <- fluidPage(
              style = "font-family: 'Futura', cursive; color: #852D2C; background-color: #EA93B8;
                       border-radius: 6px;")
     )    
-)
+  )
 )
 
-apps_selection_3_8 <- act_aes %>% 
-  filter(weight >= 3 & weight <= 8) %>% 
-  pull(name)
 
+# SERVER
+# render network viz
 server <- function(input, output) {
   output$network <- renderVisNetwork({
     visIgraph(wes_network_n_e, 
               type = "full"
-              ) %>% 
+    ) %>% 
       visInteraction(hover = TRUE,
                      tooltipStyle = 'position: fixed;visibility:hidden;padding: 2px;white-space: nowrap;
  font-family: Futura;font-size:16px;color: #852D2C;background-color: #EA93B8;border-radius: 6px;') %>% 
       visOptions(
-                 highlightNearest = list(enabled = TRUE, degree = list(from = 1, to = 1),
-                                         algorithm = "hierarchical")) %>% 
+        highlightNearest = list(enabled = TRUE, degree = list(from = 1, to = 1),
+                                algorithm = "hierarchical")) %>% 
       visEdges(arrows = list(to = FALSE, from = FALSE)) 
   })
   
-  # select an actor
+  # input - select an actor
   observe({
     nodes_selection <- input$selact
     
@@ -334,29 +328,28 @@ server <- function(input, output) {
       visSelectNodes(id = nodes_selection) 
   })
   
-  # select a range for number of apearances of actor
+  # input - select a range for number of apearances of actor
   observe({
     apps_selection <- act_aes %>% 
       filter(weight >= input$apprange[1] & weight <= input$apprange[2]) %>% 
       pull(name)
     
-      visNetworkProxy("network") %>%
-        visSelectNodes(id = apps_selection)
-
+    visNetworkProxy("network") %>%
+      visSelectNodes(id = apps_selection)
+    
   })
   
-  # select group as decided by me - Regulars, Early Players, Late Players
+  # input - select group as decided by me - Regulars, Early Players, Late Players
   observe({
-      group_selection <- wes_groups %>% 
-        filter(group == input$selgroup) %>% 
-        pull(actor)
+    group_selection <- wes_groups %>% 
+      filter(group == input$selgroup) %>% 
+      pull(actor)
     
     visNetworkProxy("network") %>%
       visSelectNodes(id = group_selection) 
   })
-
+  
   
 }
-
 
 shinyApp(ui = ui, server = server)
